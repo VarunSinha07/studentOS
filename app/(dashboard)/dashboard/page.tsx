@@ -14,8 +14,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { TasksApp } from "@/components/os-windows/TasksApp";
 import { NotesApp } from "@/components/os-windows/NotesApp";
-import { DashboardApp } from "@/components/os-windows/DashboardApp";
+import { SystemLogApp } from "@/components/os-windows/SystemLogApp";
 import { StudyPlannerApp } from "@/components/os-windows/StudyPlannerApp";
+import { SettingsApp } from "@/components/os-windows/SettingsApp";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
@@ -84,6 +85,38 @@ export default function Desktop() {
   );
   const [highestZIndex, setHighestZIndex] = useState(10);
   const [currentTime, setCurrentTime] = useState("");
+  const [currentDate, setCurrentDate] = useState("");
+  const [greeting, setGreeting] = useState("");
+
+  const [prefs, setPrefs] = useState({
+    showRam: true,
+    showBattery: true,
+    use24Hour: false,
+    showFocusHub: true,
+    wallpaper: "",
+  });
+
+  useEffect(() => {
+    const loadPrefs = () => {
+      const savedPrefs = localStorage.getItem("studentos_prefs");
+      if (savedPrefs) {
+        try {
+          const parsed = JSON.parse(savedPrefs);
+          setPrefs({
+            showRam: parsed.showRam ?? true,
+            showBattery: parsed.showBattery ?? true,
+            use24Hour: parsed.use24Hour ?? false,
+            showFocusHub: parsed.showFocusHub ?? true,
+            wallpaper: parsed.wallpaper ?? "",
+          });
+        } catch (e) {}
+      }
+    };
+
+    loadPrefs();
+    window.addEventListener("preferences-updated", loadPrefs);
+    return () => window.removeEventListener("preferences-updated", loadPrefs);
+  }, []);
 
   // Guard routing and Top bar Clock
   useEffect(() => {
@@ -93,16 +126,29 @@ export default function Desktop() {
       const now = new Date();
       setCurrentTime(
         now.toLocaleTimeString([], {
-          hour12: false,
+          hour12: !prefs.use24Hour,
           hour: "2-digit",
           minute: "2-digit",
         }),
       );
+
+      setCurrentDate(
+        now.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        }),
+      );
+
+      const hour = now.getHours();
+      if (hour < 12) setGreeting("Good morning");
+      else if (hour < 18) setGreeting("Good afternoon");
+      else setGreeting("Good evening");
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, [session, isPending, router]);
+  }, [session, isPending, prefs.use24Hour, router]);
 
   // Window Manager Logic
   const openApp = (appId: string) => {
@@ -112,6 +158,13 @@ export default function Desktop() {
         { id: appId, zIndex: highestZIndex + 1 },
       ]);
       setHighestZIndex((prev) => prev + 1);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("os-process", {
+            detail: { action: "START", app: appId },
+          }),
+        );
+      }
     } else {
       focusApp(appId);
     }
@@ -119,6 +172,13 @@ export default function Desktop() {
 
   const closeApp = (appId: string) => {
     setOpenApps((prev) => prev.filter((a) => a.id !== appId));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("os-process", {
+          detail: { action: "TERM", app: appId },
+        }),
+      );
+    }
   };
 
   const focusApp = (appId: string) => {
@@ -133,7 +193,23 @@ export default function Desktop() {
   if (isPending || !session) return null; // Wait for auth
 
   return (
-    <div className="relative w-full h-full flex flex-col">
+    <div
+      className="relative w-full h-full flex flex-col bg-cover bg-center bg-no-repeat transition-all duration-700"
+      style={{
+        backgroundImage: prefs.wallpaper ? `url(${prefs.wallpaper})` : "none",
+      }}
+    >
+      {/* Background Overlay for Legibility */}
+      <div
+        className={`absolute inset-0 z-0 pointer-events-none transition-all duration-700 ${
+          prefs.wallpaper
+            ? prefs.showFocusHub
+              ? "bg-black/40 backdrop-blur-md"
+              : "bg-black/10 backdrop-blur-none"
+            : "bg-transparent"
+        }`}
+      />
+
       {/* Top Menu Bar - MacOS Styled */}
       <div className="fixed top-0 left-0 right-0 h-8 bg-[#111116]/60 flex items-center px-4 justify-between z-[100] text-[13px] backdrop-blur-2xl border-b border-white/5 transition-all outline-none select-none">
         <div className="flex items-center gap-5 font-semibold text-slate-300 tracking-wide">
@@ -156,16 +232,45 @@ export default function Desktop() {
           </span>
         </div>
         <div className="flex items-center gap-4 text-slate-300 font-medium tracking-wide">
-          <span className="hidden sm:flex items-center gap-1.5">
-            <Cpu className="w-3.5 h-3.5 opacity-80" /> 14%
-          </span>
-          <span className="hidden sm:inline">100% 🔋</span>
+          {prefs.showRam && (
+            <span className="hidden sm:flex items-center gap-1.5 animate-in fade-in duration-300">
+              <Cpu className="w-3.5 h-3.5 opacity-80" /> 14%
+            </span>
+          )}
+          {prefs.showBattery && (
+            <span className="hidden sm:inline animate-in fade-in duration-300">
+              100% 🔋
+            </span>
+          )}
           <span>{currentTime}</span>
         </div>
       </div>
 
       {/* Workspace Area - Apps render here */}
       <div className="flex-1 w-full h-full relative overflow-hidden pt-8 pb-32">
+        {/* Desktop Focus Hub (Empty State) */}
+        <AnimatePresence>
+          {openApps.length === 0 && prefs.showFocusHub && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+            >
+              <h1 className="text-6xl md:text-8xl font-bold text-white/90 tracking-tighter mix-blend-overlay drop-shadow-2xl">
+                {currentTime.split(" ")[0]}
+              </h1>
+              <p className="mt-4 text-xl md:text-2xl text-white/70 font-medium tracking-wide">
+                {greeting}, {session.user.name?.split(" ")[0] || "Student"}.
+              </p>
+              <p className="mt-2 text-md text-white/50 tracking-wide uppercase text-sm font-semibold">
+                {currentDate}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Render Apps conditionally based on State */}
         <AnimatePresence>
           {openApps.find((a) => a.id === "Tasks") && (
@@ -188,7 +293,7 @@ export default function Desktop() {
           )}
 
           {openApps.find((a) => a.id === "Dashboard") && (
-            <DashboardApp
+            <SystemLogApp
               key="dashboard-app"
               onClose={() => closeApp("Dashboard")}
               zIndex={openApps.find((a) => a.id === "Dashboard")!.zIndex}
@@ -202,6 +307,15 @@ export default function Desktop() {
               onClose={() => closeApp("Calendar")}
               zIndex={openApps.find((a) => a.id === "Calendar")!.zIndex}
               onFocus={() => focusApp("Calendar")}
+            />
+          )}
+
+          {openApps.find((a) => a.id === "Settings") && (
+            <SettingsApp
+              key="settings-app"
+              onClose={() => closeApp("Settings")}
+              zIndex={openApps.find((a) => a.id === "Settings")!.zIndex}
+              onFocus={() => focusApp("Settings")}
             />
           )}
         </AnimatePresence>

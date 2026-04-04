@@ -13,8 +13,10 @@ import {
   BookOpen,
 } from "lucide-react";
 import gsap from "gsap";
-import { getSubjects } from "@/actions/subjects";
+import { getSubjects, createSubject } from "@/actions/subjects";
+import { createNote, updateNote } from "@/actions/notes";
 import { authClient } from "@/lib/auth-client";
+import { generateStudyPlan } from "@/actions/ai";
 
 // Mac OS Window Control Buttons Component
 function MacDots({
@@ -51,43 +53,11 @@ function MacDots({
 }
 
 // Temporary Mock Data for AI Generation
-const MOCK_PLAN = [
-  {
-    day: 1,
-    title: "Review fundamentals & syllabus",
-    description: "Read through core concepts and organize materials.",
-  },
-  {
-    day: 2,
-    title: "Deep dive: Core Concepts",
-    description: "Focus on chapters 1-3. Do practice exercises.",
-  },
-  {
-    day: 3,
-    title: "Practice & Application",
-    description: "Solve past papers and identify weak areas.",
-  },
-  {
-    day: 4,
-    title: "Weak area revision",
-    description: "Re-read chapters where you struggled yesterday.",
-  },
-  {
-    day: 5,
-    title: "Mock Test 1",
-    description: "Take a full timed mock exam under test conditions.",
-  },
-  {
-    day: 6,
-    title: "Final Review",
-    description: "Review all formulas, definitions, and flashcards.",
-  },
-  {
-    day: 7,
-    title: "Rest & Mental Prep",
-    description: "Light review. Get adequate sleep for tomorrow.",
-  },
-];
+type MockPlanItem = {
+  day: number;
+  title: string;
+  description: string;
+};
 
 export function StudyPlannerApp({
   onClose,
@@ -103,12 +73,37 @@ export function StudyPlannerApp({
 
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [newSubjectName, setNewSubjectName] = useState<string>("");
   const [examDate, setExamDate] = useState<string>("");
-
+  // File Context Upload
+  const [syllabusBase64, setSyllabusBase64] = useState<string>("");
+  const [syllabusMimeType, setSyllabusMimeType] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [plan, setPlan] = useState<typeof MOCK_PLAN | null>(null);
+  const [plan, setPlan] = useState<MockPlanItem[] | null>(null);
   const [error, setError] = useState<string>("");
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError("File is too large (Max 2MB).");
+      return;
+    }
+
+    setSyllabusMimeType(file.type);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64String = (reader.result as string).split(",")[1];
+      setSyllabusBase64(base64String);
+    };
+    reader.onerror = () => {
+      setError("Failed to read file.");
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Window Controls State
   const [isMinimized, setIsMinimized] = useState(false);
@@ -209,7 +204,11 @@ export function StudyPlannerApp({
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSubject) {
-      setError("Please select a subject or create one in the Notes app.");
+      setError("Please select a subject or create one.");
+      return;
+    }
+    if (selectedSubject === "create_new" && !newSubjectName.trim()) {
+      setError("Please enter a name for the new subject.");
       return;
     }
     if (!examDate) {
@@ -219,20 +218,107 @@ export function StudyPlannerApp({
 
     const examD = new Date(examDate);
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     if (examD <= today) {
       setError("Exam date must be in the future.");
+      return;
+    }
+
+    const timeDiff = examD.getTime() - today.getTime();
+    const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+    if (daysLeft > 60) {
+      setError(
+        "Exam date is too far away. Limit is 60 days to ensure a focused plan.",
+      );
       return;
     }
 
     setError("");
     setGenerating(true);
     setPlan(null);
+    setSaveSuccess(false);
 
-    // Simulate AI generation delay
-    setTimeout(() => {
-      setPlan(MOCK_PLAN);
+    try {
+      let targetSubjectId = selectedSubject;
+      let targetSubjectName = newSubjectName;
+
+      if (selectedSubject === "create_new" && session?.user?.id) {
+        const createSubRes = await createSubject(
+          session.user.id,
+          newSubjectName,
+        );
+        if (createSubRes.success && createSubRes.subject) {
+          targetSubjectId = createSubRes.subject.id;
+          targetSubjectName = createSubRes.subject.name;
+          setSubjects((prev) => [...prev, createSubRes.subject!]);
+          setSelectedSubject(targetSubjectId);
+        } else {
+          setError(createSubRes.error || "Failed to create subject.");
+          setGenerating(false);
+          return;
+        }
+      } else {
+        targetSubjectName =
+          subjects.find((s) => s.id === selectedSubject)?.name || "the subject";
+      }
+
+      const res = await generateStudyPlan(
+        targetSubjectName,
+        examD.toLocaleDateString(),
+        daysLeft,
+        targetSubjectId,
+        session?.user?.id,
+        syllabusBase64 || undefined,
+        syllabusMimeType || undefined,
+      );
+
+      if (res.success && res.plan) {
+        setPlan(res.plan);
+
+        // Auto-save the plan as a new note in the Knowledge Base
+        const noteRes = await createNote(
+          session?.user?.id as string,
+          targetSubjectId,
+        );
+        if (noteRes.success && noteRes.note) {
+          const planHtml = `
+            <h1>Study Plan: ${targetSubjectName}</h1>
+            <p><strong>Exam Date:</strong> ${examD.toLocaleDateString()} (${daysLeft} Days)</p>
+            <br />
+            ${res.plan
+              .map(
+                (item: { day: number; title: string; description: string }) => `
+              <h2>Day ${item.day}: ${item.title}</h2>
+              <p>${item.description}</p>
+            `,
+              )
+              .join("")}
+          `;
+
+          await updateNote(
+            noteRes.note.id,
+            `Study Plan - ${examD.toLocaleDateString()}`,
+            planHtml,
+            targetSubjectId,
+          );
+          setSaveSuccess(true);
+
+          // Dispatch global event for the Notes app to auto-refresh its data
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("notes-updated"));
+          }
+        }
+      } else {
+        setError(res.error || "Failed to generate plan.");
+      }
+    } catch (err: Error | unknown) {
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
+    } finally {
       setGenerating(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -308,22 +394,37 @@ export function StudyPlannerApp({
                 {loading ? (
                   <div className="h-10 bg-white/5 animate-pulse rounded-lg border border-white/5"></div>
                 ) : (
-                  <div className="relative">
-                    <select
-                      value={selectedSubject}
-                      onChange={(e) => setSelectedSubject(e.target.value)}
-                      className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-orange-500/50 appearance-none [color-scheme:dark]"
-                    >
-                      {subjects.length === 0 && (
-                        <option value="">No subjects found...</option>
-                      )}
-                      {subjects.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
+                  <div className="relative flex flex-col gap-2">
+                    <div className="relative">
+                      <select
+                        value={selectedSubject}
+                        onChange={(e) => setSelectedSubject(e.target.value)}
+                        className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-orange-500/50 appearance-none [color-scheme:dark]"
+                      >
+                        {subjects.length === 0 && (
+                          <option value="">No subjects found...</option>
+                        )}
+                        {subjects.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                        <option value="create_new">
+                          + Create New Subject...
                         </option>
-                      ))}
-                    </select>
-                    <BookOpen className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      </select>
+                      <BookOpen className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    </div>
+                    {selectedSubject === "create_new" && (
+                      <input
+                        type="text"
+                        placeholder="New Subject Name"
+                        value={newSubjectName}
+                        onChange={(e) => setNewSubjectName(e.target.value)}
+                        className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                        autoFocus
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -340,6 +441,19 @@ export function StudyPlannerApp({
                     className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-orange-500/50 appearance-none [color-scheme:dark]"
                   />
                   <Calendar className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                </div>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-bold tracking-widest text-slate-500 uppercase">
+                  Syllabus Context (Optional)
+                </label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept=".pdf,.txt"
+                    onChange={handleFileUpload}
+                    className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-500/10 file:text-orange-400 hover:file:bg-orange-500/20 bg-black/40 border border-white/10 rounded-lg p-1.5"
+                  />
                 </div>
               </div>
             </div>
@@ -370,6 +484,18 @@ export function StudyPlannerApp({
                 animate={{ opacity: 1, y: 0 }}
                 className="relative"
               >
+                {saveSuccess && (
+                  <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col gap-1 shadow-lg">
+                    <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                      <Sparkles className="w-5 h-5" />
+                      Plan Generated & Saved!
+                    </div>
+                    <p className="text-sm text-emerald-400/80 ml-7">
+                      This study plan has been securely saved to your Knowledge
+                      Base as a new note.
+                    </p>
+                  </div>
+                )}
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="text-lg font-bold text-white tracking-tight">
                     Your Preparation Timeline

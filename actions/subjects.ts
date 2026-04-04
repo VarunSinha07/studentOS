@@ -32,9 +32,10 @@ export async function createSubject(userId: string, name: string) {
         userId,
       },
     });
-    revalidatePath("/dashboard");
+    // revalidatePath("/dashboard");
     return { success: true, subject };
-  } catch {
+  } catch (error) {
+    console.error(error);
     return { success: false, error: "Failed to create subject" };
   }
 }
@@ -44,9 +45,10 @@ export async function deleteSubject(subjectId: string) {
     await prisma.subject.delete({
       where: { id: subjectId },
     });
-    revalidatePath("/dashboard");
+    // revalidatePath("/dashboard");
     return { success: true };
-  } catch {
+  } catch (error) {
+    console.error(error);
     return { success: false, error: "Failed to delete subject" };
   }
 }

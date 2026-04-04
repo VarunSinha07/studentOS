@@ -24,7 +24,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { createNote, getNotes, updateNote, deleteNote } from "@/actions/notes";
 import { getSubjects, createSubject, deleteSubject } from "@/actions/subjects";
 import { authClient } from "@/lib/auth-client";
-
+import { summarizeNote } from "@/actions/ai";
 type Subject = {
   id: string;
   name: string;
@@ -93,6 +93,7 @@ export function NotesApp({
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
   const [isCreatingSubject, setIsCreatingSubject] = useState(false);
 
@@ -239,8 +240,21 @@ export function NotesApp({
 
     void loadData();
 
+    const handleNotesUpdated = () => {
+      if (!cancelled) {
+        void loadData();
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("notes-updated", handleNotesUpdated);
+    }
+
     return () => {
       cancelled = true;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("notes-updated", handleNotesUpdated);
+      }
     };
   }, [session?.user?.id]);
 
@@ -317,6 +331,30 @@ export function NotesApp({
     setExpandedSubjects((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleSummarize = async () => {
+    if (!editor || !selectedNote || summarizing) return;
+    const content = editor.getHTML();
+    if (!content || content.trim() === "<p></p>") return;
+
+    setSummarizing(true);
+    try {
+      const plainText = editor.getText();
+      const res = await summarizeNote(plainText);
+      if (res.success && res.summary) {
+        editor.commands.insertContent(
+          `<br><br><strong>🧠 AI Summary:</strong><br>${res.summary}`,
+        );
+      } else {
+        console.error(res.error);
+        alert(res.error || "Failed to summarize.");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   return (
     <motion.div
       ref={windowRef}
@@ -343,10 +381,18 @@ export function NotesApp({
         <div className="flex items-center gap-2 text-xs text-slate-400 font-mono font-medium tracking-wide pointer-events-none">
           <BookOpen className="w-3.5 h-3.5 text-indigo-400" /> ~/knowledge_base
         </div>
-        <div className="w-[50px] flex justify-end">
-          {/* Future AI Button Placeholder */}
-          <button className="text-indigo-400/50 hover:text-indigo-400 transition-colors hidden sm:flex items-center gap-1 text-[11px] font-semibold bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-500/20 pointer-events-auto">
-            <Sparkles className="w-3 h-3" /> Summarize
+        <div className="flex justify-end pr-2 overflow-visible">
+          <button
+            onClick={handleSummarize}
+            disabled={summarizing || !selectedNote}
+            className="text-indigo-400 hover:text-indigo-300 transition-colors hidden sm:flex items-center gap-1 text-[11px] font-semibold bg-indigo-500/10 px-2.5 py-1.5 rounded-md border border-indigo-500/20 pointer-events-auto disabled:opacity-50 whitespace-nowrap"
+          >
+            {summarizing ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Sparkles className="w-3 h-3" />
+            )}
+            {summarizing ? "Summarizing..." : "Summarize"}
           </button>
         </div>
       </div>

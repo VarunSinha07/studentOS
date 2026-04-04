@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Dummy Build",
+			"type": "shell",
+			"command": "echo \"Building...\""
+		},
+		{
+			"label": "Next.js Build",
+			"type": "shell",
+			"command": "bun run build"
+		},
+		{
+			"label": "Test Build",
+			"type": "shell",
+			"command": "bun run build"
+		},
+		{
+			"label": "Test Build 2",
+			"type": "shell",
+			"command": "bun run build"
+		}
+	]
+}
