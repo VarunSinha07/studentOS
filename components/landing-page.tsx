@@ -14,6 +14,7 @@ import {
   Cpu,
   LogIn,
   UserPlus,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,7 +29,7 @@ function DockItem({
   color,
   href,
 }: {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   color: string;
   href?: string;
@@ -161,7 +162,7 @@ export function OSLandingPage() {
       );
 
       // Feature Windows Parallax & Entrance
-      gsap.utils.toArray(".feature-row").forEach((row: any, i) => {
+      gsap.utils.toArray<HTMLElement>(".feature-row").forEach((row, i) => {
         const text = row.querySelector(".feature-text");
         const windowElem = row.querySelector(".feature-window");
         const isEven = i % 2 === 0;
