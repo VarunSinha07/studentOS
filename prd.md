@@ -93,3 +93,50 @@ A normalized, minimal schema to support the above features.
 - Securely configure Gemini API keys and endpoints.
 - Add Study Plan generator form and render outputs.
 - Build "Summarize Notes" action and append results to the note viewer.
+
+
+
+## Core Pillars
+1. **Focus & Flow**: Eliminate context switching.
+2. **Gamification & Motivation**: Reward consistency through streaks and levels.
+3. **Intelligence (AI)**: Do the heavy lifting (breakdowns, scheduling, summarizing).
+4. **Resilience**: Help users recover gracefully when they fall behind.
+
+
+
+## Phase 5: Focus & Time Management
+### 1. Focus Mode Timer (Pomodoro)
+- **App Module**: A dedicated, distraction-free environment block.
+- **Features**: Customizable work/break intervals, active task selection (directly from the TaskManager), and deep-focus white-noise integration.
+- **Persistence**: Timer continues globally (minimized state) while using other OS functions.
+
+### 2. Desktop Integration
+- **Active State Widget**: When minimized, the empty desktop's Focus Hub displays the active countdown timer and current task in progress, removing the default greeting.
+
+## Phase 6: Schedule & Recovery
+### 1. Calendar & Deadlines View
+- **Unified Interface**: Real-time aggregation of Tasks, Assignments, and Exams.
+- **Views**: Monthly and Weekly grid formats supporting drag-and-drop rescheduling.
+- **Smart Reminders**: Upcoming deadlines highlighted in red as they approach (48hrs/24hrs).
+
+### 2. Missed Task Recovery
+- **Catch-up Wizard**: A dedicated workflow for overdue items. Instead of red numbers piling up, the system groups missed tasks and asks for bulk actions (Reschedule to Today, Archive, or AI Auto-Resolve).
+
+## Phase 7: Analytics & Gamification
+### 1. Insight Cards
+- **Desktop Widgets**: "Glanceable" mini-states on the OS desktop (e.g., "7 Tasks Due Today", "3 Day Streak 🔥").
+- **Weekly Performance Report**: A summarized weekend view calculating task completion rates, total focus hours, and strongest study days.
+
+### 2. Gamification Engine
+- **XP & Levels**: Experience points awarded for checking off tasks on time and completing Focus Mode cycles.
+- **Visuals**: Level-up notifications, unlockable desktop wallpapers, and badge milestones visible in the profile settings.
+
+## Phase 8: AI & Refinement
+### 1. Intelligent Workflows
+- **AI Task Breakdown**: One-click generation of sub-tasks for large, daunting assignments.
+- **AI Context & Summarizer**: Ability to quickly generate study plans from uploaded notes or long text blocks.
+
+### 2. UX Upgrades & Polish
+- **System-Wide Skeletons**: Clean loading states for all data-fetching operations.
+- **Refined Empty States**: Playful illustrations and clear CTA buttons when an app is empty.
+- **Animations**: `framer-motion` layout animations for list re-ordering and window transitions.

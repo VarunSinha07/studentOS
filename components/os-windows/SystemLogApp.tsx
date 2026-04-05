@@ -176,7 +176,7 @@ export function SystemLogApp({
             "text-red-500",
           );
         }
-      } catch (err) {
+      } catch {
         appendLog("ERROR", "Telemetry daemon unavailable.", "text-red-500");
       }
     };

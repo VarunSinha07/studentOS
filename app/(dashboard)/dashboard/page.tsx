@@ -109,7 +109,7 @@ export default function Desktop() {
             showFocusHub: parsed.showFocusHub ?? true,
             wallpaper: parsed.wallpaper ?? "",
           });
-        } catch (e) {}
+        } catch {}
       }
     };
 

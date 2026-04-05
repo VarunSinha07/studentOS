@@ -20,6 +20,7 @@ import {
 import gsap from "gsap";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 function GsapToggle({
   checked,
@@ -152,7 +153,7 @@ export function SettingsApp({
         if (parsed.showFocusHub !== undefined)
           setShowFocusHub(parsed.showFocusHub);
         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      } catch (e) {}
+      } catch {}
     }
   }, []);
 
@@ -548,10 +549,13 @@ export function SettingsApp({
                         }`}
                       >
                         {bg.id ? (
-                          <img
+                          <Image
                             src={bg.id}
                             alt={bg.label}
-                            className="object-cover w-full h-full opacity-80"
+                            fill
+                            unoptimized
+                            sizes="(max-width: 768px) 33vw, 240px"
+                            className="object-cover opacity-80"
                           />
                         ) : (
                           <div className="w-full h-full bg-[#0a0a0f]" />
