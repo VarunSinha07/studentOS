@@ -22,7 +22,6 @@ import { FocusApp } from "@/components/os-windows/FocusApp";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { getDashboardStats } from "@/actions/stats";
-import { Flame, CheckCircle } from "lucide-react";
 
 // Floating Dock Item Component
 function DockItem({
@@ -97,7 +96,7 @@ export default function Desktop() {
     isActive: boolean;
   } | null>(null);
 
-  const [stats, setStats] = useState({
+  const [, setStats] = useState({
     streak: 0,
     productivity: 0,
     todayTasks: 0,

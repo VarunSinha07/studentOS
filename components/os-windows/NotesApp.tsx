@@ -618,7 +618,7 @@ export function NotesApp({
             >
               <FileText className="w-10 h-10 stroke-[1.5px] opacity-50" />
               <p className="text-sm font-medium">
-                You haven't created any notes yet.
+                You haven&apos;t created any notes yet.
               </p>
             </motion.div>
           ) : (
