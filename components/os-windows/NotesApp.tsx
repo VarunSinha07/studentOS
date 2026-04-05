@@ -609,6 +609,18 @@ export function NotesApp({
                 />
               </div>
             </>
+          ) : notes.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-3"
+            >
+              <FileText className="w-10 h-10 stroke-[1.5px] opacity-50" />
+              <p className="text-sm font-medium">
+                You haven't created any notes yet.
+              </p>
+            </motion.div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-slate-600">
               <div className="flex flex-col items-center gap-4">

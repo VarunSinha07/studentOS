@@ -110,7 +110,8 @@ export function TasksApp({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // New States for Priority, Dates, and Editing
+  const [filter, setFilter] = useState<"All" | "Overdue">("All");
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPriority, setEditPriority] = useState<TaskPriority>("Medium");
   const [editDate, setEditDate] = useState("");
@@ -277,6 +278,19 @@ export function TasksApp({
     }
   };
 
+  const handleRescheduleToToday = async (
+    id: string,
+    priority: TaskPriority,
+  ) => {
+    const today = new Date().toISOString().split("T")[0];
+    const res = await updateTask(id, priority, new Date(today));
+    if (res?.success) {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, dueDate: today } : t)),
+      );
+    }
+  };
+
   const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
       case "High":
@@ -312,6 +326,20 @@ export function TasksApp({
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  const isOverdue = (dueDate: Date | string | null, isCompleted: boolean) => {
+    if (isCompleted || !dueDate) return false;
+    const d = new Date(dueDate);
+    d.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return d.getTime() < today.getTime();
+  };
+
+  const filteredTasks = tasks.filter((task) => {
+    if (filter === "All") return true;
+    return isOverdue(task.dueDate, task.isCompleted);
+  });
+
   return (
     <motion.div
       ref={windowRef}
@@ -345,9 +373,25 @@ export function TasksApp({
 
         <div className="flex items-center justify-between mb-8 z-10 shrink-0">
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight mb-1 font-serif">
-              Daily Agenda
-            </h1>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-3xl font-extrabold text-white tracking-tight font-serif">
+                Daily Agenda
+              </h1>
+              <div className="flex bg-[#1a1a24] border border-white/10 rounded-lg p-0.5 mt-1">
+                <button
+                  onClick={() => setFilter("All")}
+                  className={`px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-md transition-all ${filter === "All" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setFilter("Overdue")}
+                  className={`px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider rounded-md transition-all ${filter === "Overdue" ? "bg-red-500/20 text-red-400" : "text-slate-500 hover:text-slate-300"}`}
+                >
+                  Overdue
+                </button>
+              </div>
+            </div>
             <p className="text-sm text-slate-400 font-medium">
               Keep your momentum high.
             </p>
@@ -452,15 +496,21 @@ export function TasksApp({
               <Loader2 className="w-6 h-6 animate-spin text-emerald-500/50" />
               <p className="text-xs font-mono">Fetching datastores...</p>
             </div>
-          ) : tasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-4 opacity-60">
-              <CalendarDays className="w-12 h-12 stroke-[1px]" />
-              <p className="text-sm font-medium">Your agenda is clear.</p>
-            </div>
+          ) : filteredTasks.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="flex flex-col items-center justify-center h-full text-slate-500 gap-3"
+            >
+              <CheckSquare className="w-10 h-10 stroke-[1.5px] opacity-50" />
+              <p className="text-sm font-medium">No pending tasks</p>
+            </motion.div>
           ) : (
             <AnimatePresence mode="popLayout">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <motion.div
+                  layout
                   key={task.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -565,6 +615,17 @@ export function TasksApp({
                             />{" "}
                             {task.priority}
                           </span>
+
+                          {isOverdue(task.dueDate, task.isCompleted) && (
+                            <button
+                              onClick={() =>
+                                handleRescheduleToToday(task.id, task.priority)
+                              }
+                              className="text-[11px] px-2 py-1 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 font-medium whitespace-nowrap transition-colors"
+                            >
+                              Reschedule to Today
+                            </button>
+                          )}
 
                           <button
                             onClick={() =>

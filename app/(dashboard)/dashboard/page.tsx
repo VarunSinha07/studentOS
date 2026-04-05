@@ -7,6 +7,7 @@ import {
   BookOpen,
   Calendar,
   Settings,
+  Target,
   Cpu,
   Layers,
   type LucideIcon,
@@ -17,8 +18,11 @@ import { NotesApp } from "@/components/os-windows/NotesApp";
 import { SystemLogApp } from "@/components/os-windows/SystemLogApp";
 import { StudyPlannerApp } from "@/components/os-windows/StudyPlannerApp";
 import { SettingsApp } from "@/components/os-windows/SettingsApp";
+import { FocusApp } from "@/components/os-windows/FocusApp";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { getDashboardStats } from "@/actions/stats";
+import { Flame, CheckCircle } from "lucide-react";
 
 // Floating Dock Item Component
 function DockItem({
@@ -87,6 +91,18 @@ export default function Desktop() {
   const [currentTime, setCurrentTime] = useState("");
   const [currentDate, setCurrentDate] = useState("");
   const [greeting, setGreeting] = useState("");
+  const [focusState, setFocusState] = useState<{
+    timeLeft: number;
+    mode: string;
+    isActive: boolean;
+  } | null>(null);
+
+  const [stats, setStats] = useState({
+    streak: 0,
+    productivity: 0,
+    todayTasks: 0,
+    upcomingDeadlines: 0,
+  });
 
   const [prefs, setPrefs] = useState({
     showRam: true,
@@ -117,6 +133,29 @@ export default function Desktop() {
     window.addEventListener("preferences-updated", loadPrefs);
     return () => window.removeEventListener("preferences-updated", loadPrefs);
   }, []);
+
+  useEffect(() => {
+    const handleFocusTick = (e: CustomEvent) => setFocusState(e.detail);
+    window.addEventListener(
+      "focus-timer-tick",
+      handleFocusTick as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "focus-timer-tick",
+        handleFocusTick as EventListener,
+      );
+  }, []);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      getDashboardStats(session.user.id).then((res) => {
+        if (res.success && res.stats) {
+          setStats(res.stats);
+        }
+      });
+    }
+  }, [session?.user?.id]);
 
   // Guard routing and Top bar Clock
   useEffect(() => {
@@ -258,12 +297,33 @@ export default function Desktop() {
               transition={{ duration: 0.6, ease: "easeOut" }}
               className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
             >
-              <h1 className="text-6xl md:text-8xl font-bold text-white/90 tracking-tighter mix-blend-overlay drop-shadow-2xl">
-                {currentTime.split(" ")[0]}
-              </h1>
-              <p className="mt-4 text-xl md:text-2xl text-white/70 font-medium tracking-wide">
-                {greeting}, {session.user.name?.split(" ")[0] || "Student"}.
-              </p>
+              {focusState && focusState.isActive ? (
+                <>
+                  <h1 className="flex items-center gap-6 text-6xl md:text-8xl font-bold text-white/90 tracking-tighter mix-blend-overlay drop-shadow-2xl">
+                    <Target
+                      className={`w-16 h-16 md:w-20 md:h-20 ${focusState.mode === "break" ? "text-emerald-400" : "text-purple-400"} animate-pulse`}
+                    />
+                    {Math.floor(focusState.timeLeft / 60)
+                      .toString()
+                      .padStart(2, "0")}
+                    :{(focusState.timeLeft % 60).toString().padStart(2, "0")}
+                  </h1>
+                  <p className="mt-4 text-xl md:text-2xl text-white/70 font-medium tracking-wide">
+                    {focusState.mode === "break"
+                      ? "Break Mode Active"
+                      : "Focus Mode Active"}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-6xl md:text-8xl font-bold text-white/90 tracking-tighter mix-blend-overlay drop-shadow-2xl">
+                    {currentTime.split(" ")[0]}
+                  </h1>
+                  <p className="mt-4 text-xl md:text-2xl text-white/70 font-medium tracking-wide">
+                    {greeting}, {session.user.name?.split(" ")[0] || "Student"}.
+                  </p>
+                </>
+              )}
               <p className="mt-2 text-md text-white/50 tracking-wide uppercase text-sm font-semibold">
                 {currentDate}
               </p>
@@ -309,7 +369,14 @@ export default function Desktop() {
               onFocus={() => focusApp("Calendar")}
             />
           )}
-
+          {openApps.find((a) => a.id === "Focus") && (
+            <FocusApp
+              key="focus-app"
+              onClose={() => closeApp("Focus")}
+              zIndex={openApps.find((a) => a.id === "Focus")!.zIndex}
+              onFocus={() => focusApp("Focus")}
+            />
+          )}
           {openApps.find((a) => a.id === "Settings") && (
             <SettingsApp
               key="settings-app"
@@ -358,6 +425,15 @@ export default function Desktop() {
             color="text-orange-400"
             isOpen={openApps.some((a) => a.id === "Calendar")}
             onClick={() => openApp("Calendar")}
+          />
+
+          {/* Focus App Icon */}
+          <DockItem
+            icon={Target}
+            label="Focus Mode"
+            color="text-purple-400"
+            isOpen={openApps.some((a) => a.id === "Focus")}
+            onClick={() => openApp("Focus")}
           />
         </div>
 
