@@ -1,78 +1,88 @@
-# StudentOS 🚀
+# StudentOS
 
-> **An all-in-one personal operating system for students to manage academics, productivity, and progress.**
+> An all-in-one personal operating system for students to manage academics, tasks, focus sessions, and AI-assisted study planning.
 
-StudentOS is a web-based desktop environment built to centralize student workflows. Instead of juggling multiple disconnected apps for notes, task management, focus timers, and study schedules, StudentOS brings everything into a clean, distraction-free, window-based operating system UI powered by AI.
-
----
-
-## ✨ Features
-
-### 🖥️ Desktop OS Experience
-- **Window Management**: Multitask naturally with floating, draggable, and minimizable app windows.
-- **Taskbar & Dock**: Launch apps quickly, switch between active windows, and check real-time system status.
-- **Modern Aesthetic**: Glassmorphism UI styled with Tailwind CSS, smooth Framer Motion and GSAP animations, dark mode support.
-
-### 📊 Dashboard App
-- **Overview & Stats**: View daily productivity percentage, active study streak (days), completed tasks, and total focus time.
-- **Visual Analytics**: Interactive task completion and productivity charts powered by Recharts.
-- **Quick Glance**: Today's due tasks and upcoming exam deadlines at a glance.
-
-### 📋 Task Management
-- **Prioritization & Scheduling**: Categorize tasks by priority (*Low, Medium, High*) and assign due dates.
-- **AI Task Breakdown**: Leverage Google Gemini to break down large assignments into actionable sub-tasks.
-- **Status Tracking**: One-click completion toggles and progress indicators.
-
-### 📝 Notes System
-- **Rich Text Editor**: Full WYSIWYG note-taking powered by Tiptap (`@tiptap/react`).
-- **Subject Categorization**: Organize notes into custom academic subjects.
-- **AI Note Summarizer**: Automatically condense long study notes into clean HTML bulleted highlights using Gemini AI.
-
-### 📅 AI Study Planner
-- **Exam Preparation Generator**: Input a subject, exam date, and optional syllabus document to auto-generate a structured day-by-day study schedule.
-- **Notes Context Integration**: Automatically scans existing subject notes to personalize the generated study roadmap.
-
-### ⏱️ Focus Mode (Pomodoro Timer)
-- **Distraction-Free Environment**: Customizable focus work intervals and break timers.
-- **Task Integration**: Link current focus sessions directly to active tasks.
-- **Background Soundscapes**: Integrated ambient sounds for deep concentration.
-
-### 🔐 Authentication & Profile
-- **Flexible Auth**: Powered by Better-Auth supporting Credentials (email/password) and OAuth (Google).
-- **Settings & Logs**: Theme preference settings, profile details, and system activity logs.
+StudentOS is a web-based desktop environment built to centralize student productivity into a single workspace. Instead of juggling multiple disconnected apps for notes, task management, focus timers, and study schedules, StudentOS brings everything into a clean, distraction-free, window-based operating system interface.
 
 ---
 
-## 🛠️ Tech Stack
+## Overview
 
-| Layer | Technology |
-| :--- | :--- |
-| **Framework** | [Next.js 16 (App Router)](https://nextjs.org/) + [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
-| **Styling & UI** | [Tailwind CSS v4](https://tailwindcss.com/), [Framer Motion](https://www.framer.com/motion/), [GSAP](https://gsap.com/), [Lucide Icons](https://lucide.dev/) |
-| **Editor & Charts** | [Tiptap Editor](https://tiptap.dev/), [Recharts](https://recharts.org/) |
-| **Database & ORM** | [PostgreSQL](https://www.postgresql.org/), [Prisma 7 ORM](https://www.prisma.io/) (`@prisma/adapter-pg`) |
-| **Authentication** | [Better Auth](https://www.better-auth.com/) |
-| **AI Engine** | [Google Gemini 2.5 Flash](https://ai.google.dev/) via `@google/genai` |
+StudentOS transforms your browser into an intuitive desktop experience tailored for academic success. Students can run multiple applications simultaneously in draggable, resizable windows, enabling smooth multitasking between note-taking, task tracking, and study planning.
 
 ---
 
-## 📁 Project Structure
+## System Workflow
 
-```text
-studentOS/
-├── actions/              # Next.js Server Actions (AI, Notes, Tasks, Stats, Subjects)
-├── app/                  # Next.js App Router routes & layouts
-│   ├── (auth)/           # Authentication pages (sign-in, sign-up, reset-password)
-│   ├── (dashboard)/      # OS Desktop environment & main app window router
-│   ├── api/              # API endpoints (Better-Auth, etc.)
-│   └── generated/        # Prisma client build output
-├── components/           # UI Components & Desktop Apps
-│   ├── os-windows/       # OS Window Applications (Dashboard, Tasks, Notes, etc.)
-│   └── landing-page.tsx  # Product Landing Page
-├── lib/                  # Shared utility modules (Prisma client, Better-Auth config)
-├── prisma/               # Database schema & migrations
-├── public/               # Static assets & audio files
-├── next.config.ts        # Next.js configuration
-├── package.json          # Project dependencies & scripts
-└── prd.md                # Product Requirements Document
+```mermaid
+graph TD
+    User["Student User"] --> Auth["Authentication & Session"]
+    Auth --> OS["StudentOS Desktop Workspace"]
+
+    OS --> Dashboard["Dashboard App"]
+    OS --> Tasks["Task Manager App"]
+    OS --> Notes["Academic Notes App"]
+    OS --> Planner["AI Study Planner App"]
+    OS --> Focus["Focus Mode App"]
+
+    Dashboard --> Metrics["Productivity & Streak Analytics"]
+
+    Tasks --> TaskAI["AI Task Decomposition"]
+    TaskAI --> Gemini1["Google Gemini AI"]
+
+    Notes --> RichEdit["Rich Text Editor"]
+    Notes --> NoteAI["AI Note Summarizer"]
+    NoteAI --> Gemini2["Google Gemini AI"]
+
+    Planner --> PlanGen["Daily Exam Schedule Generator"]
+    PlanGen --> Gemini3["Google Gemini AI"]
+    Notes -. Context Support .-> PlanGen
+
+    Focus --> Timer["Pomodoro Timer & Soundscapes"]
+    Tasks -. Bind Active Task .-> Focus
 ```
+
+---
+
+## Core Applications
+
+### Desktop Environment
+- **Window Management**: Open, drag, minimize, maximize, and arrange application windows across your desktop workspace.
+- **Taskbar & Dock**: Quickly launch applications, toggle active windows, and view real-time system status.
+- **Modern Interface**: Designed with a clean dark-mode glassmorphism aesthetic for distraction-free studying.
+
+### Dashboard
+- **Productivity Tracking**: View your daily completion rate, active study streak (days), completed tasks, and total focus time.
+- **Visual Analytics**: Monitor your weekly task completion progress through interactive charts.
+- **Upcoming Overview**: Keep track of today's urgent tasks and approaching exam deadlines at a glance.
+
+### Task Manager
+- **Prioritization & Deadlines**: Organize academic tasks by priority levels (Low, Medium, High) and due dates.
+- **AI Task Breakdown**: Convert complex assignments or projects into actionable sub-tasks with one click.
+- **Progress Tracking**: Filter tasks by status and mark items complete inline.
+
+### Academic Notes
+- **Rich Text Editor**: Take detailed lecture notes with full formatting tools, headings, lists, and quotes.
+- **Subject Organization**: Group notes by custom academic subjects for quick reference.
+- **AI Summarizer**: Instantly condense lengthy study notes into concise, key-point bullet summaries for exam revision.
+
+### AI Study Planner
+- **Automated Exam Prep**: Generate a structured, day-by-day study roadmap based on your subject, target exam date, and optional syllabus document.
+- **Context-Aware Scheduling**: Integrates existing subject notes into study plan generation to focus on topics you haven't reviewed yet.
+
+### Focus Mode (Pomodoro Timer)
+- **Customizable Intervals**: Set custom focus durations, short breaks, and long breaks.
+- **Task Binding**: Link active tasks directly to your focus session to log study time against specific goals.
+- **Ambient Soundscapes**: Built-in background audio options to enhance concentration.
+
+### Settings & System Logs
+- **Customization**: Manage user profile details, theme settings, and preferences.
+- **Activity Logs**: Track system activity and study history.
+
+---
+
+## Key Benefits
+
+- **Centralized Workspace**: Eliminates context switching across separate tabs and tools.
+- **AI Assistance**: Automates study scheduling, note summarization, and task breakdown.
+- **Flow & Focus**: Combines task tracking directly with a Pomodoro timer and ambient audio.
